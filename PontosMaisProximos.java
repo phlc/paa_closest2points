@@ -20,10 +20,10 @@ Pontos - Classe que armazena as coordenadas de um ponto e sua posição nas orde
 */
 class Ponto{
     //atributos
-    final private double x;
-    final private double y;
-    private int ordX;
-    private int ordY;
+    final private double x; //abscissas
+    final private double y; //ordenadas
+    private int ordX; //posição na ordenação pelo eixo X
+    private int ordY; //posição na ordenação pelo eixo Y
 
 
     //Construtor
@@ -103,7 +103,109 @@ public class PontosMaisProximos{
     }
 
     /*
+    Pequenas funções de suporte ao heapSort para simplificação no uso de arranjo começando em 0
+    */
+    private static int esq(int n){
+        return ((n+1)*2)-1;
+    }
+    private static int dir(int n){
+        return (n+1)*2;
+    }
+
+    /*
+    heapify - Reorganiza o heap a partir de um elemento em direção aos seus filhos
+    @param Ponto[] listap; int i, tamanho; boolean x: lista pontos, indice, tamanho, ordenacao eixo X ou eixo Y
+    */
+    private static void heapify(Ponto[] lista, int i, int tamanho, boolean x){
+        int e = esq(i);
+        int d = dir(i);
+        int maior = -1;
+
+        //heapify pelo eixo X
+        if(x){
+            if(e<tamanho && lista[e].getX()>lista[i].getX())
+                maior = e;
+            else 
+                maior = i;
+            
+            if(d<tamanho && lista[d].getX()>lista[maior].getX())
+                maior = d;
+        }
+        //heapify pelo eixo Y
+        else{
+            if(e<tamanho && lista[e].getY()>lista[i].getY())
+                maior = e;
+            else 
+                maior = i;
+            
+            if(d<tamanho && lista[d].getY()>lista[maior].getY())
+                maior = d;
+        }
+
+        if(maior != i){
+            //trocar maior por i
+            Ponto buffer = lista[i];
+            lista[i] = lista[maior];
+            lista[maior] =  buffer;
+
+            //heapify posicao que era maior e contem i
+            heapify(lista, maior, tamanho, x);
+        }
+    } 
+    
+    /*
+    heapSort - HeapSort para pontos
+    @param Ponto[], boolean x -> lista de pontos e referencia para ordenacao eixo X ou eixo Y
+    @return Ponto[]
+    */
+    public static Ponto[] heapSort(Ponto[] lista, boolean x){
+        //Declaracoes
+        Ponto[] resposta = new Ponto[lista.length];
+        
+        //Copiar lista pra resposta
+        for(int i=0; i<lista.length; i++){
+            resposta[i] = lista[i];
+        }
+
+        //Construir heap
+        for(int i=resposta.length/2; i>=0; i--){
+            heapify(resposta, i, resposta.length, x);
+        }
+
+        //ordenar
+        for(int i=resposta.length-1; i>0; i--){
+            //trocar 0 com último
+            Ponto buffer = resposta[0];
+            resposta[0] = resposta[i];
+            resposta[i] =  buffer;
+
+            //heapify resposta[0]
+            heapify(resposta, 0, i, x);
+        }
+
+        return resposta;
+    }
+
+
+    /*
+    algoritmoNLogN - Soluciona o problema por divisão e conquista em O(n Log n)
+    @param Ponto[] - lista de pontos no plano
+    @return resposta[] - para de pontos mais próximos
+    */
+    public static Ponto[] algoritmoNLogN(Ponto[] Lista){
+        Ponto[] resposta = new Ponto[2];
+
+
+
+        return resposta;
+    }
+
+    /*
     main
+            A entrada teste contém conjuntos de pontos sendo que cada conjunto é precedido por um
+            inteiro n, denotando o numero de pontos, na primeira linha, seguido de n pontos separados 
+            por linha, sendo as coordenadas X e Y separadas por espaço em branco.
+            O final do arquivo é identificado por n = 0.
     */
     public static void main(String[] args){
         //Declaracoes
@@ -127,9 +229,17 @@ public class PontosMaisProximos{
                 lista[i] =  new Ponto(x, y);
             }
 
+            //Solucao O(n^2)
             Ponto[] resposta = algoritmoN2(lista);
+            System.out.println("Algoritmo O(n^2):");
             System.out.println("P1("+resposta[0].getX()+","+resposta[0].getY()+") P2("+resposta[1].getX()+","+resposta[1].getY()+")");
+            System.out.println();
 
+            //Solucao O(n log n)
+            resposta = algoritmoNLogN(lista);
+            System.out.println("Algoritmo O(n log n):");
+            System.out.println("P1("+resposta[0].getX()+","+resposta[0].getY()+") P2("+resposta[1].getX()+","+resposta[1].getY()+")");
+            System.out.println();
 
             //Ler nova entrada
             quantidade = reader.nextInt();
