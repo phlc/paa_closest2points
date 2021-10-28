@@ -20,15 +20,11 @@ class Ponto{
     //atributos
     final private double x; //abscissas
     final private double y; //ordenadas
-    private int ordX; //posição na ordenação pelo eixo X
-    private int ordY; //posição na ordenação pelo eixo Y
-
 
     //Construtor
     public Ponto(double x, double y){
         this.x = x;
         this.y = y;
-        this.ordX = this.ordY = -1;
     }
 
     //Sets & Gets
@@ -37,18 +33,6 @@ class Ponto{
     }
     public double getY(){
         return y;
-    }
-    public int getOrdX(){
-        return ordX;
-    }
-    public int getOrdY(){
-        return ordY;
-    }
-    public void setOrdX(int ordX){
-        this.ordX = ordX;
-    }
-    public void setOrdY(int ordY){
-        this.ordY = ordY;
     }
 }
 
@@ -153,15 +137,15 @@ public class PontosMaisProximos{
     
     /*
     heapSort - HeapSort para pontos
-    @param Ponto[], boolean x -> lista de pontos e referencia para ordenacao eixo X ou eixo Y
+    @param Ponto[], int tamanho, boolean x -> lista de pontos, tamanho lista e referencia para ordenacao eixo X ou eixo Y
     @return Ponto[]
     */
-    public static Ponto[] heapSort(Ponto[] lista, boolean x){
+    public static Ponto[] heapSort(Ponto[] lista, int tamanho, boolean x){
         //Declaracoes
-        Ponto[] resposta = new Ponto[lista.length];
+        Ponto[] resposta = new Ponto[tamanho];
         
         //Copiar lista pra resposta
-        for(int i=0; i<lista.length; i++){
+        for(int i=0; i<tamanho; i++){
             resposta[i] = lista[i];
         }
 
@@ -177,30 +161,122 @@ public class PontosMaisProximos{
             resposta[0] = resposta[i];
             resposta[i] =  buffer;
 
-            //registrar no ponto sua posição na lista ordenada
-            if(x){
-                resposta[i].setOrdX(i);
-            }
-            else{
-                resposta[i].setOrdY(i);
-            }
-
             //heapify resposta[0]
             heapify(resposta, 0, i, x);
-        }
-
-        //registrar no ponto sua posição na lista ordenada
-        if(x){
-            resposta[0].setOrdX(0);
-        }
-        else{
-            resposta[0].setOrdY(0);
         }
 
         return resposta;
     }
 
 
+    /*
+    algoritmoNLog2N - Soluciona o problema por divisão e conquista em O(n Log^2 n)
+    @param Ponto[] - lista de pontos no plano
+    @return Ponto[2] resposta - par de pontos mais próximos
+    */
+    public static Ponto[] algoritmoNLog2N(Ponto[] lista){
+        //Declaracoes
+        Ponto[] resposta;
+        Ponto[] ordenadaX; //lista ordenada pelo eixo X 
+
+        //obter listas ordenadas
+        ordenadaX = heapSort(lista, lista.length, true);
+
+        //Calcular pontos mais próximos
+        resposta = algoritmoNLog2N(ordenadaX, 0, ordenadaX.length-1);
+
+        return resposta;
+    }
+
+    /*
+    Overload algoritmoNLog2N - calcula os dois pontos de menor distância recursivamente
+    @param Ponto[] ordenadaX; int esq, dir -> lista ordenada pelo eixo X e indices de inicio e fim
+    @param Ponto[2] resposta -> par de pontos mais próximos
+    */
+    private static Ponto[] algoritmoNLog2N(Ponto[] ordenadaX, int esq, int dir){
+        //Declaracoes
+        Ponto[] resposta = new Ponto[2];
+        
+        //Caso base 2 pontos
+        if(dir-esq == 1){
+            resposta[0] = ordenadaX[esq];
+            resposta[1] = ordenadaX[dir];
+        }
+        //Caso base 3 pontos - compara as 3 distâncias possíveis
+        else if(dir-esq == 2){
+            if(distancia(ordenadaX[esq], ordenadaX[dir]) > distancia(ordenadaX[esq], ordenadaX[esq+1])){
+                resposta[0] = ordenadaX[esq];
+                resposta[1] = ordenadaX[dir];
+            }
+            else{
+                resposta[0] = ordenadaX[esq];
+                resposta[1] = ordenadaX[esq+1];
+            }
+
+            if(distancia(ordenadaX[esq+1], ordenadaX[dir]) > distancia(resposta[0], resposta[1])){
+                resposta[0] = ordenadaX[esq+1];
+                resposta[1] = ordenadaX[dir];
+            }
+        }
+        //Recursão 4 ou mais pontos
+        else{
+            //Declaracoes locais
+            double delta;
+            int mid, contador;
+            Ponto[] esquerda, direita, faixaDelta; 
+
+            //Elemento do meio
+            mid = esq + (dir-esq)/2;
+
+            //Calcular pontos mais proximos de cada metade
+            esquerda = algoritmoNLog2N(ordenadaX, esq, mid);
+            direita = algoritmoNLog2N(ordenadaX, mid+1, dir);
+
+            //verificar o menor dos dois
+            if(distancia(esquerda[0], esquerda[1]) < distancia(direita[0], direita[1])){
+                resposta = esquerda;
+            }
+            else{
+                resposta = direita;
+            }
+
+            //Calcular delta
+            delta = distancia(resposta[0], resposta[1]);
+            
+            //criar lista dos elementos + ou - delta do meio pelo eixo X
+            faixaDelta = new Ponto[ordenadaX.length];
+            contador = 0;
+
+            //passar por todos os pontos -- Tempo O(n)
+            for(int i=0; i<ordenadaX.length; i++){
+                //testar se a distância do ponto ao meio é menor que delta
+                if(delta > Math.abs(ordenadaX[mid].getX()-ordenadaX[i].getX())){
+                    faixaDelta[contador] = ordenadaX[i];
+                    contador++;
+                }
+            }
+
+            //Ordenar faixa Delta pelo eixo Y  -- Tempo O(nlogn)
+            faixaDelta = heapSort(faixaDelta, contador, false);
+
+            //Verificar do menor para o maior se a distancia entre dois pontos da faixaDelta é menor que delta
+            //O(n), pois o while interno é O(1), no máximo 7 tentativas
+            for(int i=0; i<contador; i++){
+                int j = i+1;
+                while(j<contador && delta > distancia(faixaDelta[i], faixaDelta[j])){
+                    delta = distancia(faixaDelta[i], faixaDelta[j]);
+                    resposta[0] = faixaDelta[i];
+                    resposta[1] = faixaDelta[j];
+                }
+            }
+        }
+
+        return resposta;
+    }
+
+
+
+//-------
     /*
     algoritmoNLogN - Soluciona o problema por divisão e conquista em O(n Log n)
     @param Ponto[] - lista de pontos no plano
@@ -212,8 +288,8 @@ public class PontosMaisProximos{
         Ponto[] ordenadaX, ordenadaY; //listas ordenadas pelo eixo X e eixo Y
 
         //obter listas ordenadas
-        ordenadaX = heapSort(lista, true);
-        ordenadaY = heapSort(lista, false);
+        ordenadaX = heapSort(lista, lista.length, true);
+        ordenadaY = heapSort(lista, lista.length, false);
 
         //Calcular pontos mais próximos
         resposta = algoritmoNLogN(ordenadaX, ordenadaY, 0, ordenadaX.length-1);
@@ -277,11 +353,10 @@ public class PontosMaisProximos{
             delta = distancia(resposta[0], resposta[1]);
             
             //criar lista ordenada pelo eixo Y dos elementos + ou - delta do meio pelo eixo X
-            //Tempo O(n)
             faixaDelta = new Ponto[ordenadaY.length];
             contador = 0;
 
-            //passar por todos os pontos
+            //passar por todos os pontos -- Tempo O(n)
             for(int i=0; i<ordenadaY.length; i++){
                 //testar se a distância do ponto ao meio é menor que delta
                 if(delta > Math.abs(ordenadaX[mid].getX()-ordenadaY[i].getX())){
@@ -291,7 +366,7 @@ public class PontosMaisProximos{
             }
 
             //Verificar do menor para o maior se a distancia entre dois pontos da faixaDelta é menor que delta
-            //O(n), pois o teste interno é O(1), no máximo 7 tentativas
+            //O(n), pois o while interno é O(1), no máximo 7 tentativas
             for(int i=0; i<contador; i++){
                 int j = i+1;
                 while(j<contador && delta > distancia(faixaDelta[i], faixaDelta[j])){
@@ -338,7 +413,11 @@ public class PontosMaisProximos{
             Ponto[] resposta = algoritmoN2(lista);
             System.out.println("Algoritmo O(n^2):");
             System.out.println("P1("+resposta[0].getX()+","+resposta[0].getY()+") P2("+resposta[1].getX()+","+resposta[1].getY()+")");
-            System.out.println();
+
+            // Solucao O(n log^2 n)
+            resposta = algoritmoNLog2N(lista);
+            System.out.println("Algoritmo O(n log^2 n):");
+            System.out.println("P1("+resposta[0].getX()+","+resposta[0].getY()+") P2("+resposta[1].getX()+","+resposta[1].getY()+")");
 
             //Solucao O(n log n)
             resposta = algoritmoNLogN(lista);
