@@ -6,8 +6,6 @@ Matricula: 651230
 
 Trabalho Pontos Mais Próximos:
     Dado diversos pontos em um plano, encontrar os dois mais próximos.
-
-    Abordagem: Divisão e Conquista
 */
 
 //Dependencias 
@@ -114,7 +112,7 @@ public class PontosMaisProximos{
 
     /*
     heapify - Reorganiza o heap a partir de um elemento em direção aos seus filhos
-    @param Ponto[] listap; int i, tamanho; boolean x: lista pontos, indice, tamanho, ordenacao eixo X ou eixo Y
+    @param Ponto[] lista; int i, tamanho; boolean x: lista pontos, indice elemento, tamanho, ordenacao eixo X ou eixo Y
     */
     private static void heapify(Ponto[] lista, int i, int tamanho, boolean x){
         int e = esq(i);
@@ -179,8 +177,24 @@ public class PontosMaisProximos{
             resposta[0] = resposta[i];
             resposta[i] =  buffer;
 
+            //registrar no ponto sua posição na lista ordenada
+            if(x){
+                resposta[i].setOrdX(i);
+            }
+            else{
+                resposta[i].setOrdY(i);
+            }
+
             //heapify resposta[0]
             heapify(resposta, 0, i, x);
+        }
+
+        //registrar no ponto sua posição na lista ordenada
+        if(x){
+            resposta[0].setOrdX(0);
+        }
+        else{
+            resposta[0].setOrdY(0);
         }
 
         return resposta;
@@ -190,12 +204,103 @@ public class PontosMaisProximos{
     /*
     algoritmoNLogN - Soluciona o problema por divisão e conquista em O(n Log n)
     @param Ponto[] - lista de pontos no plano
-    @return resposta[] - para de pontos mais próximos
+    @return Ponto[2] resposta - par de pontos mais próximos
     */
-    public static Ponto[] algoritmoNLogN(Ponto[] Lista){
+    public static Ponto[] algoritmoNLogN(Ponto[] lista){
+        //Declaracoes
+        Ponto[] resposta;
+        Ponto[] ordenadaX, ordenadaY; //listas ordenadas pelo eixo X e eixo Y
+
+        //obter listas ordenadas
+        ordenadaX = heapSort(lista, true);
+        ordenadaY = heapSort(lista, false);
+
+        //Calcular pontos mais próximos
+        resposta = algoritmoNLogN(ordenadaX, ordenadaY, 0, ordenadaX.length-1);
+
+        return resposta;
+    }
+
+    /*
+    Overload algoritmoNLogN - calcula os dois pontos de menor distância recursivamente
+    @param Ponto[] ordenadaX, ordenadaY; int esq, dir -> listas ordenadas por eixos e indices de inicio e fim
+    @param Ponto[2] resposta -> par de pontos mais próximos
+    */
+    private static Ponto[] algoritmoNLogN(Ponto[] ordenadaX, Ponto[] ordenadaY, int esq, int dir){
+        //Declaracoes
         Ponto[] resposta = new Ponto[2];
+        
+        //Caso base 2 pontos
+        if(dir-esq == 1){
+            resposta[0] = ordenadaX[esq];
+            resposta[1] = ordenadaX[dir];
+        }
+        //Caso base 3 pontos - compara as 3 distâncias possíveis
+        else if(dir-esq == 2){
+            if(distancia(ordenadaX[esq], ordenadaX[dir]) > distancia(ordenadaX[esq], ordenadaX[esq+1])){
+                resposta[0] = ordenadaX[esq];
+                resposta[1] = ordenadaX[dir];
+            }
+            else{
+                resposta[0] = ordenadaX[esq];
+                resposta[1] = ordenadaX[esq+1];
+            }
 
+            if(distancia(ordenadaX[esq+1], ordenadaX[dir]) > distancia(resposta[0], resposta[1])){
+                resposta[0] = ordenadaX[esq+1];
+                resposta[1] = ordenadaX[dir];
+            }
+        }
+        //Recursão 4 ou mais pontos
+        else{
+            //Declaracoes locais
+            double delta;
+            int mid, contador;
+            Ponto[] esquerda, direita, faixaDelta; 
 
+            //Elemento do meio
+            mid = esq + (dir-esq)/2;
+
+            //Calcular pontos mais proximos de cada metade
+            esquerda = algoritmoNLogN(ordenadaX, ordenadaY, esq, mid);
+            direita = algoritmoNLogN(ordenadaX, ordenadaY, mid+1, dir);
+
+            //verificar o menor dos dois
+            if(distancia(esquerda[0], esquerda[1]) < distancia(direita[0], direita[1])){
+                resposta = esquerda;
+            }
+            else{
+                resposta = direita;
+            }
+
+            //Calcular delta
+            delta = distancia(resposta[0], resposta[1]);
+            
+            //criar lista ordenada pelo eixo Y dos elementos + ou - delta do meio pelo eixo X
+            //Tempo O(n)
+            faixaDelta = new Ponto[ordenadaY.length];
+            contador = 0;
+
+            //passar por todos os pontos
+            for(int i=0; i<ordenadaY.length; i++){
+                //testar se a distância do ponto ao meio é menor que delta
+                if(delta > Math.abs(ordenadaX[mid].getX()-ordenadaY[i].getX())){
+                    faixaDelta[contador] = ordenadaY[i];
+                    contador++;
+                }
+            }
+
+            //Verificar do menor para o maior se a distancia entre dois pontos da faixaDelta é menor que delta
+            //O(n), pois o teste interno é O(1), no máximo 7 tentativas
+            for(int i=0; i<contador; i++){
+                int j = i+1;
+                while(j<contador && delta > distancia(faixaDelta[i], faixaDelta[j])){
+                    delta = distancia(faixaDelta[i], faixaDelta[j]);
+                    resposta[0] = faixaDelta[i];
+                    resposta[1] = faixaDelta[j];
+                }
+            }
+        }
 
         return resposta;
     }
@@ -239,8 +344,8 @@ public class PontosMaisProximos{
             resposta = algoritmoNLogN(lista);
             System.out.println("Algoritmo O(n log n):");
             System.out.println("P1("+resposta[0].getX()+","+resposta[0].getY()+") P2("+resposta[1].getX()+","+resposta[1].getY()+")");
-            System.out.println();
-
+            System.out.println(); 
+ 
             //Ler nova entrada
             quantidade = reader.nextInt();
         }
